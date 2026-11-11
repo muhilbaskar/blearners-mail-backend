@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>New Registration</title></head>
+<body style="margin:0;padding:0;background:#f8f9fa;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:30px auto;background:#fff;border-radius:12px;border:1px solid #eee;overflow:hidden;">
+    <div style="background:linear-gradient(90deg,#CB02FF,#4A54ED);padding:24px;text-align:center;">
+      <h1 style="margin:0;color:#fff;font-size:22px;">New Registration</h1>
+      <p style="margin:8px 0 0;color:#f0e6ff;font-size:13px;">Record #{{recordId}} · {{submittedAt}}</p>
+    </div>
+
+    <div style="padding:28px;">
+      <p style="margin:0 0 16px;color:#333;font-size:14px;">
+        A new user has registered via the BLearners website.
+      </p>
+
+      <table width="100%" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;color:#555;width:40%;">Full Name</td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#111;"><strong>{{fullName}}</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;color:#555;">Email</td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#111;">
+            <a href="mailto:{{email}}" style="color:#4A54ED;">{{email}}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;color:#555;">Phone</td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#111;">{{phone}}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;color:#555;">Institution / School</td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#111;">{{institution}}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;color:#555;">I am a</td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:14px;color:#111;"><strong>{{role}}</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;font-size:13px;color:#555;">Place</td>
+          <td style="padding:10px 0;font-size:14px;color:#111;">{{place}}</td>
+        </tr>
+      </table>
+
+      <div style="margin-top:24px;padding:14px;background:#faf5ff;border-radius:8px;border:1px solid #f3e8ff;">
+        <p style="margin:0;font-size:13px;color:#555;">
+          Reply directly to <a href="mailto:{{email}}" style="color:#CB02FF;">{{email}}</a> to reach this user.
+        </p>
+      </div>
+
+      <p style="margin-top:24px;font-size:12px;color:#999;text-align:center;">
+        Automated notification from {{companyName}} · BLearners
+      </p>
+    </div>
+  </div>
+</body>
+</html>
