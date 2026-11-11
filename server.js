@@ -1,6 +1,7 @@
 // server.js
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 // Boot SQLite (creates file + schema on first run)
@@ -29,6 +30,9 @@ app.use(
 );
 
 app.use(express.json({ limit: "100kb" }));
+
+// Serve public images so email clients can load the logo over HTTPS
+app.use("/images", express.static(path.join(__dirname, "public", "images")));
 
 app.get("/", (_req, res) =>
   res.json({ ok: true, service: "blearners-mail-backend", version: "1.0.0" })

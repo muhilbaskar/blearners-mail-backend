@@ -60,6 +60,12 @@ async function handleRegister(req, res, next) {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
     const companyName = process.env.COMPANY_NAME || "Blended Pedagogy";
 
+    // ✅ NEW LOGO LOGIC
+    // Use LOGO_URL if provided; otherwise fall back to APP_BASE_URL + static path
+    const explicitLogo = (process.env.LOGO_URL || "").trim();
+    const baseUrl = (process.env.APP_BASE_URL || "").trim().replace(/\/+$/, "");
+    const logoUrl = explicitLogo || (baseUrl ? `${baseUrl}/images/blearners-logo.png` : "");
+
     // 3a. Admin notification
     try {
       await deliverEmail({
@@ -79,6 +85,7 @@ async function handleRegister(req, res, next) {
           }),
           recordId: record.id,
           companyName,
+          logoUrl,
         },
       });
       adminMail = "sent";
