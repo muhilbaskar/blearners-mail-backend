@@ -1,46 +1,43 @@
 // db/registrationRepo.js
-const sqlite = require("./sqliteConnection");
+const Registration = require("./models/Registration");
 
-const insertStatement = sqlite.prepare(`
-  INSERT INTO registrations
-    (full_name, email, phone, institution, role, place)
-  VALUES
-    (?, ?, ?, ?, ?, ?)
-`);
-
-const updateMailStatusStatement = sqlite.prepare(`
-  UPDATE registrations
-     SET admin_mail = ?, welcome_mail = ?, mail_error = ?
-   WHERE id = ?
-`);
-
-const findByIdStatement = sqlite.prepare(
-  `SELECT * FROM registrations WHERE id = ?`
-);
-
-function insertRegistration(data) {
-  const result = insertStatement.run(
-    data.full_name,
-    data.email,
-    data.phone,
-    data.institution,
-    data.role,
-    data.place
-  );
-  return findByIdStatement.get(result.lastInsertRowid);
+/**
+ * Insert a new registration. Returns the created document as plain JSON
+ * with the same shape as the old SQLite row:
+ *   { id, full_name, email, phone, institution, role, place,
+ *     admin_mail, welcome_mail, mail_error, created_at }
+ */
+async function insertRegistration(data) {
+  const doc = await Registration.create({
+    full_name: data.full_name,
+    email: data.email,
+    phone: data.phone,
+    institution: data.institution,
+    role: data.role,
+    place: data.place,
+  });
+  return doc.toJSON();
 }
 
-function findRegistrationById(id) {
-  return findByIdStatement.get(id);
+async function findRegistrationById(id) {
+  const doc = await Registration.findById(id);
+  if (!doc) return null;
+  return doc.toJSON();
 }
 
-function updateRegistrationMailStatus(id, { adminMail, welcomeMail, error }) {
-  updateMailStatusStatement.run(
-    adminMail || "pending",
-    welcomeMail || "pending",
-    error || null,
-    id
-  );
+/**
+ * Update the email delivery statuses for a given registration.
+ * Values are the same as before: 'pending' | 'sent' | 'failed'.
+ */
+async function updateRegistrationMailStatus(
+  id,
+  { adminMail, welcomeMail, error }
+) {
+  await Registration.findByIdAndUpdate(id, {
+    admin_mail: adminMail || "pending",
+    welcome_mail: welcomeMail || "pending",
+    mail_error: error || null,
+  });
 }
 
 module.exports = {

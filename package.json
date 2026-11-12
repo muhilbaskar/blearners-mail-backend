@@ -1,7 +1,7 @@
 {
   "name": "blearners-mail-backend",
   "version": "1.0.0",
-  "description": "Registration form backend — saves to SQLite and sends 2 emails",
+  "description": "Registration form backend — saves to MongoDB and sends 2 emails",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,6 +13,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "mongoose": "^8.9.5",
     "nodemailer": "^8.0.5"
   },
   "devDependencies": {

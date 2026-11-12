@@ -4,8 +4,8 @@ const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
 
-// Boot SQLite (creates file + schema on first run)
-require("./db/sqliteConnection");
+// MongoDB connection (async — awaited before we start accepting requests)
+const { connectMongo } = require("./db/mongoConnection");
 
 const apiRouter = require("./routes/apiRouter");
 const { globalErrorHandler } = require("./middleware/globalErrorHandler");
@@ -41,7 +41,35 @@ app.get("/", (_req, res) =>
 app.use(apiRouter);
 app.use(globalErrorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`   Allowed origins: ${allowedOrigins.join(", ")}`);
-});
+/**
+ * Local dev: connect once, then listen on PORT.
+ * Vercel (serverless): the exported handler below connects lazily per cold
+ * start (warm invocations reuse the module-level Mongoose connection).
+ */
+async function bootstrap() {
+  await connectMongo();
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`   Allowed origins: ${allowedOrigins.join(", ")}`);
+  });
+}
+
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    console.error("❌ Failed to start server:", err);
+    process.exit(1);
+  });
+}
+
+// ---- Vercel serverless export ----
+let vercelReady = false;
+const handler = async (req, res) => {
+  if (!vercelReady) {
+    await connectMongo();
+    vercelReady = true;
+  }
+  return app(req, res);
+};
+
+module.exports = handler;
+module.exports.app = app;

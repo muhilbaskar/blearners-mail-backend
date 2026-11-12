@@ -5,64 +5,44 @@ const {
 } = require("../db/registrationRepo");
 const { deliverEmail } = require("../services/emailSender");
 
-// Preset roles offered by the frontend dropdown. "Others" is a special value
-// that means "the user typed a custom role in the free-text input".
+// Preset roles offered by the frontend dropdown. "Others" means the user typed
+// a custom role in the free-text input.
 const PRESET_ROLES = ["Administrator", "Teacher", "Student", "Parent", "Others"];
 
-// Safety cap so a malicious client cannot push a giant blob into the DB
-// or into an email. Does not affect any legitimate use case.
+// Safety cap so a malicious client cannot push a giant blob into the DB or an
+// email. Does not affect any legitimate use case.
 const MAX_ROLE_LENGTH = 80;
 
 /**
- * Normalize the incoming role from the request body.
- *
- * Supports THREE shapes so old and new clients both work:
- *
+ * Normalize the incoming role. Three shapes are accepted:
  *   1) { role: "Teacher" }                    -> "Teacher"
- *   2) { role: "Others", customRole: "X" }    -> "X" (trimmed, capped)
+ *   2) { role: "Others", customRole: "X" }    -> "X"
  *   3) { role: "Working Person" }             -> "Working Person"
- *      (this is what the current frontend sends when the user picks "Others"
- *       and types a custom role — previously rejected with a 400)
- *
- * Returns { role } on success, or { error } on failure.
  */
 function resolveRole(body) {
   const rawRole = typeof body.role === "string" ? body.role.trim() : "";
   const rawCustom =
     typeof body.customRole === "string" ? body.customRole.trim() : "";
 
-  // Case 1: "Others" picked + explicit customRole field sent
   if (rawRole === "Others") {
-    if (!rawCustom) {
-      return { error: "Please specify your role" };
-    }
+    if (!rawCustom) return { error: "Please specify your role" };
     if (rawCustom.length > MAX_ROLE_LENGTH) {
       return { error: `Role must be ${MAX_ROLE_LENGTH} characters or less` };
     }
     return { role: rawCustom };
   }
 
-  // Case 2: known preset (Administrator / Teacher / Student / Parent)
-  if (PRESET_ROLES.includes(rawRole)) {
-    return { role: rawRole };
-  }
+  if (PRESET_ROLES.includes(rawRole)) return { role: rawRole };
 
-  // Case 3: client sent a custom role string directly in `role`
-  //         (this is what your frontend currently sends for "Others")
   if (rawRole.length > 0 && rawRole.length <= MAX_ROLE_LENGTH) {
     return { role: rawRole };
   }
 
-  // Nothing usable
   return {
     error: `Role must be one of: ${PRESET_ROLES.join(", ")} or a custom role`,
   };
 }
 
-/**
- * Validate the register body. Returns { errors, role }.
- * Only "role" is normalized here; the other fields are validated in place.
- */
 function validateRegisterBody(body) {
   const errors = {};
 
@@ -77,9 +57,7 @@ function validateRegisterBody(body) {
   }
 
   const roleResult = resolveRole(body);
-  if (roleResult.error) {
-    errors.role = roleResult.error;
-  }
+  if (roleResult.error) errors.role = roleResult.error;
 
   return { errors, role: roleResult.role };
 }
@@ -103,12 +81,12 @@ async function handleRegister(req, res, next) {
       institution: req.body.institution
         ? String(req.body.institution).trim()
         : null,
-      role, // already normalized by resolveRole()
+      role,
       place: String(req.body.place).trim(),
     };
 
-    /* ---------- 2. Save to DB ---------- */
-    const record = insertRegistration(data);
+    /* ---------- 2. Save to MongoDB ---------- */
+    const record = await insertRegistration(data);
 
     /* ---------- 3. Send both emails ---------- */
     let adminMail = "pending";
@@ -118,7 +96,6 @@ async function handleRegister(req, res, next) {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
     const companyName = process.env.COMPANY_NAME || "Blended Pedagogy";
 
-    // ✅ Logo logic (unchanged from your original)
     const explicitLogo = (process.env.LOGO_URL || "").trim();
     const baseUrl = (process.env.APP_BASE_URL || "").trim().replace(/\/+$/, "");
     const logoUrl =
@@ -153,7 +130,7 @@ async function handleRegister(req, res, next) {
       mailError = `admin: ${err.message}`;
     }
 
-    // 3b. Welcome email to registrant
+    // 3b. Welcome email
     try {
       await deliverEmail({
         to: data.email,
@@ -176,8 +153,8 @@ async function handleRegister(req, res, next) {
         : `welcome: ${err.message}`;
     }
 
-    /* ---------- 4. Update statuses ---------- */
-    updateRegistrationMailStatus(record.id, {
+    /* ---------- 4. Update statuses in MongoDB ---------- */
+    await updateRegistrationMailStatus(record.id, {
       adminMail,
       welcomeMail,
       error: mailError,

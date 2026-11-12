@@ -27,9 +27,9 @@ function getSmtpTransporter() {
     pool: true,
     maxConnections: 3,
     maxMessages: 50,
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 20_000,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     logger: process.env.NODE_ENV !== "production",
     debug: process.env.NODE_ENV !== "production",
   });
