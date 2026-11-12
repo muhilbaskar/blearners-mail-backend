@@ -5,8 +5,64 @@ const {
 } = require("../db/registrationRepo");
 const { deliverEmail } = require("../services/emailSender");
 
-const VALID_ROLES = ["Administrator", "Teacher", "Student", "Parent"];
+// Preset roles offered by the frontend dropdown. "Others" is a special value
+// that means "the user typed a custom role in the free-text input".
+const PRESET_ROLES = ["Administrator", "Teacher", "Student", "Parent", "Others"];
 
+// Safety cap so a malicious client cannot push a giant blob into the DB
+// or into an email. Does not affect any legitimate use case.
+const MAX_ROLE_LENGTH = 80;
+
+/**
+ * Normalize the incoming role from the request body.
+ *
+ * Supports THREE shapes so old and new clients both work:
+ *
+ *   1) { role: "Teacher" }                    -> "Teacher"
+ *   2) { role: "Others", customRole: "X" }    -> "X" (trimmed, capped)
+ *   3) { role: "Working Person" }             -> "Working Person"
+ *      (this is what the current frontend sends when the user picks "Others"
+ *       and types a custom role — previously rejected with a 400)
+ *
+ * Returns { role } on success, or { error } on failure.
+ */
+function resolveRole(body) {
+  const rawRole = typeof body.role === "string" ? body.role.trim() : "";
+  const rawCustom =
+    typeof body.customRole === "string" ? body.customRole.trim() : "";
+
+  // Case 1: "Others" picked + explicit customRole field sent
+  if (rawRole === "Others") {
+    if (!rawCustom) {
+      return { error: "Please specify your role" };
+    }
+    if (rawCustom.length > MAX_ROLE_LENGTH) {
+      return { error: `Role must be ${MAX_ROLE_LENGTH} characters or less` };
+    }
+    return { role: rawCustom };
+  }
+
+  // Case 2: known preset (Administrator / Teacher / Student / Parent)
+  if (PRESET_ROLES.includes(rawRole)) {
+    return { role: rawRole };
+  }
+
+  // Case 3: client sent a custom role string directly in `role`
+  //         (this is what your frontend currently sends for "Others")
+  if (rawRole.length > 0 && rawRole.length <= MAX_ROLE_LENGTH) {
+    return { role: rawRole };
+  }
+
+  // Nothing usable
+  return {
+    error: `Role must be one of: ${PRESET_ROLES.join(", ")} or a custom role`,
+  };
+}
+
+/**
+ * Validate the register body. Returns { errors, role }.
+ * Only "role" is normalized here; the other fields are validated in place.
+ */
 function validateRegisterBody(body) {
   const errors = {};
 
@@ -16,20 +72,22 @@ function validateRegisterBody(body) {
   if (!body.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
     errors.email = "A valid email is required";
   }
-  if (!body.role || !VALID_ROLES.includes(body.role)) {
-    errors.role = `Role must be one of: ${VALID_ROLES.join(", ")}`;
-  }
   if (!body.place || String(body.place).trim().length < 1) {
     errors.place = "Place is required";
   }
 
-  return errors;
+  const roleResult = resolveRole(body);
+  if (roleResult.error) {
+    errors.role = roleResult.error;
+  }
+
+  return { errors, role: roleResult.role };
 }
 
 async function handleRegister(req, res, next) {
   try {
     /* ---------- 1. Validate ---------- */
-    const errors = validateRegisterBody(req.body);
+    const { errors, role } = validateRegisterBody(req.body);
     if (Object.keys(errors).length > 0) {
       return res.status(400).json({
         success: false,
@@ -45,7 +103,7 @@ async function handleRegister(req, res, next) {
       institution: req.body.institution
         ? String(req.body.institution).trim()
         : null,
-      role: req.body.role,
+      role, // already normalized by resolveRole()
       place: String(req.body.place).trim(),
     };
 
@@ -60,11 +118,11 @@ async function handleRegister(req, res, next) {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
     const companyName = process.env.COMPANY_NAME || "Blended Pedagogy";
 
-    // ✅ NEW LOGO LOGIC
-    // Use LOGO_URL if provided; otherwise fall back to APP_BASE_URL + static path
+    // ✅ Logo logic (unchanged from your original)
     const explicitLogo = (process.env.LOGO_URL || "").trim();
     const baseUrl = (process.env.APP_BASE_URL || "").trim().replace(/\/+$/, "");
-    const logoUrl = explicitLogo || (baseUrl ? `${baseUrl}/images/blearners-logo.png` : "");
+    const logoUrl =
+      explicitLogo || (baseUrl ? `${baseUrl}/images/blearners-logo.png` : "");
 
     // 3a. Admin notification
     try {
