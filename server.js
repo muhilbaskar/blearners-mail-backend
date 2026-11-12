@@ -10,7 +10,7 @@ const { globalErrorHandler } = require("./middleware/globalErrorHandler");
 const app = express();
 const PORT = Number(process.env.PORT) || 1234;
 
-const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
+const allowedOrigins = (process.env.CORS_ORIGINS || "https://b-learnears-platform-qq8l.vercel.app")
   .split(",").map(s => s.trim()).filter(Boolean);
 
 app.use(cors({
